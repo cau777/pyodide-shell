@@ -1,0 +1,131 @@
+<!doctype html>
+<html class="no-js" lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Python shell</title>
+    <link rel="stylesheet" href="css/style.css">
+    <meta name="description" content="Python shell that runs in the browser using WASM">
+
+    <link rel="icon" href="/favicon.ico" sizes="any">
+
+    <meta name="theme-color" content="#000000">
+
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.28.1/full/pyodide.js"></script>
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+
+    <!-- and it's easy to individually load additional languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/python.min.js"></script>
+
+    <script>hljs.highlightAll();</script>
+</head>
+
+<body>
+
+<!-- Hidden element used to measure the text size -->
+<div id="mirror"></div>
+
+<div id="terminal">
+    <p>This Python shell is running in your browser</p>
+
+    <div id="history">
+
+    </div>
+
+    <div id="command-wrapper">
+        <pre><code class="language-python" id="line-preview">>>> </code></pre>
+        <textarea id="command-input" autocomplete="off" wrap="off"></textarea>
+    </div>
+</div>
+
+<script>
+    const basePythonLines = [
+        'from math import *',
+    ]
+    const commandInput = document.getElementById('command-input')
+    const history = document.getElementById('history')
+    const linePreview = document.querySelector('#line-preview')
+    const prevLines = []
+    const pyodidePromise = loadPyodide()
+
+    const focusInput = () => {
+        document.querySelector('#command-input').focus()
+    }
+
+    const formatText = (text) => `>>> ${text.split('\n').join("\n    ")}`
+
+    const setPreviewText = (text) => {
+        linePreview.textContent = text
+        linePreview.removeAttribute('data-highlighted')
+        hljs.highlightElement(linePreview)
+    }
+
+    // Initial focus
+    focusInput()
+
+    document.querySelector('body').addEventListener('click', () => focusInput())
+    commandInput.addEventListener('input', () => {
+        const mirror = document.querySelector('#mirror')
+
+        const formattedText = formatText(commandInput.value)
+        const escapedText = formattedText
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\n$/, '\n ')  // Ensure new line renders height properly
+            .replace(/\n/g, "<br/>")
+            .replace(/ {2}/g, " &nbsp;")  // Handle double spaces
+            .replace(/ /g, "&nbsp;");     // Handle single spaces
+
+        setPreviewText(formattedText)
+        mirror.innerHTML = escapedText;
+
+        // Set the textarea's size to match the mirror
+        commandInput.style.height = mirror.offsetHeight + "px";
+        commandInput.style.width = mirror.offsetWidth + "px";
+
+    })
+    commandInput.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault()
+            const newPythonLine = commandInput.value.trim() || ' '
+            const preNode = document.createElement('pre')
+            const codeNode = document.createElement('code')
+            codeNode.className = 'language-python'
+            codeNode.innerHTML = formatText(newPythonLine)
+            preNode.appendChild(codeNode)
+            history.appendChild(preNode)
+
+            console.log("Formatted", formatText(newPythonLine))
+
+            hljs.highlightElement(codeNode);
+
+            setPreviewText(formatText(''))
+            commandInput.value = ''
+            prevLines.push(newPythonLine)
+
+            const pyodide = await pyodidePromise;
+            let result;
+            try {
+                result = pyodide.runPython([...basePythonLines, ...prevLines].join('\n'))?.toString()
+            } catch (e) {
+                console.error(e)
+                prevLines.pop()
+                result = e.stack
+            }
+
+            if (result) {
+                const resultNode = document.createElement('pre')
+                resultNode.innerHTML = result
+                history.appendChild(resultNode)
+            }
+        }
+    })
+</script>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+ body {
+     background-color: black;
+     font-family: monospace;
+     color: lightgray;
+     height: 100vh;
+ }
+
+ code {
+     padding: 0!important;
+     background-color: transparent!important;
+     overflow-x: visible!important;
+ }
+
+ #terminal {
+     padding-bottom: 5rem;
+ }
+
+ #command-wrapper {
+     position: relative;
+ }
+
+ #command-input {
+     outline: none;
+     background-color: transparent;
+     border: none;
+     font-family: monospace;
+
+     position: absolute;
+     top: 0;
+     left: 1.8rem;
+     padding: 0;
+     color: transparent;
+     caret-color: lightgray;
+     font-size: 13px;
+
+     width: 100%;
+     height: 200px;
+
+     resize: none;
+     white-space: pre;
+     overflow-x: visible;
+ }
+
+ #mirror {
+     position: absolute;
+     top: -9999px;
+     left: -9999px;
+     visibility: hidden;
+     white-space: pre;
+     font-family: monospace;
+     font-size: 16px;
+     line-height: 1.4;
+     padding: 8px;
+     border: 1px solid transparent;
+     box-sizing: content-box;
+     display: inline-block;
+     word-wrap: normal;
+ }
