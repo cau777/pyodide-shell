@@ -90,7 +90,7 @@
     // Initial focus
     focusInput()
 
-    document.querySelector('body').addEventListener('click', () => focusInput())
+    window.addEventListener('click', () => focusInput())
     commandInput.addEventListener('input', () => setCurrentLine(commandInput.value))
     commandInput.addEventListener('keydown', async (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
