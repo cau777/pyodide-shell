@@ -49,8 +49,10 @@
     const commandInput = document.getElementById('command-input')
     const history = document.getElementById('history')
     const linePreview = document.querySelector('#line-preview')
+    const mirror = document.querySelector('#mirror')
     const prevLines = []
     const pyodidePromise = loadPyodide()
+    let historyPosition = 0
 
     const focusInput = () => {
         document.querySelector('#command-input').focus()
@@ -64,14 +66,9 @@
         hljs.highlightElement(linePreview)
     }
 
-    // Initial focus
-    focusInput()
-
-    document.querySelector('body').addEventListener('click', () => focusInput())
-    commandInput.addEventListener('input', () => {
-        const mirror = document.querySelector('#mirror')
-
-        const formattedText = formatText(commandInput.value)
+    const setCurrentLine = (text) => {
+        commandInput.value = text
+        const formattedText = formatText(text)
         const escapedText = formattedText
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
@@ -87,8 +84,13 @@
         // Set the textarea's size to match the mirror
         commandInput.style.height = mirror.offsetHeight + "px";
         commandInput.style.width = mirror.offsetWidth + "px";
+    }
 
-    })
+    // Initial focus
+    focusInput()
+
+    document.querySelector('body').addEventListener('click', () => focusInput())
+    commandInput.addEventListener('input', () => setCurrentLine(commandInput.value))
     commandInput.addEventListener('keydown', async (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
@@ -100,22 +102,23 @@
             preNode.appendChild(codeNode)
             history.appendChild(preNode)
 
-            console.log("Formatted", formatText(newPythonLine))
-
             hljs.highlightElement(codeNode);
 
             setPreviewText(formatText(''))
             commandInput.value = ''
-            prevLines.push(newPythonLine)
 
             const pyodide = await pyodidePromise;
             let result;
             try {
-                result = pyodide.runPython([...basePythonLines, ...prevLines].join('\n'))?.toString()
+                // Don't execute errors
+                const code = [...basePythonLines, ...prevLines.filter(({isError}) => !isError).map(({line}) => line), newPythonLine].join('\n')
+                result = pyodide.runPython(code)?.toString()
+                prevLines.push({line: newPythonLine, isError: false})
+
             } catch (e) {
                 console.error(e)
-                prevLines.pop()
                 result = e.stack
+                prevLines.push({line: newPythonLine, isError: true})
             }
 
             if (result) {
@@ -123,6 +126,32 @@
                 resultNode.innerHTML = result
                 history.appendChild(resultNode)
             }
+
+            historyPosition = prevLines.length
+        } else if (e.key === 'ArrowUp') {
+            // Make sure the caret is in the first line
+            if (commandInput.value.slice(0, commandInput.selectionEnd).includes('\n'))
+                return
+
+            e.preventDefault()
+            if (historyPosition === 0) return
+            historyPosition--
+
+            const {line} = prevLines[historyPosition]
+            setCurrentLine(line)
+            commandInput.selectionEnd = line.length
+        } else if (e.key === 'ArrowDown') {
+            // Make sure the caret is in the last line
+            if (commandInput.value.slice(commandInput.selectionEnd).includes('\n'))
+                return
+
+            e.preventDefault()
+            if (historyPosition >= prevLines.length - 1) return
+            historyPosition++
+
+            const {line} = prevLines[historyPosition]
+            setCurrentLine(line)
+            commandInput.selectionEnd = line.length
         }
     })
 </script>
