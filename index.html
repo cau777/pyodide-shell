@@ -112,7 +112,7 @@
             let result;
             try {
                 // Don't execute errors
-                const code = [...basePythonLines, ...prevLines.filter(({isError}) => !isError).map(({line}) => line), newPythonLine].join('\n')
+                const code = [...basePythonLines, ...prevLines.filter(({isError}) => !isError).map(({line}) => line), newPythonLine || "''"].join('\n')
                 result = pyodide.runPython(code)?.toString()
                 prevLines.push({line: newPythonLine, isError: false})
 
